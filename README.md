@@ -17,7 +17,7 @@ A simple, standalone tool for batch converting Nikon RAW (.nef) files to high-qu
 
 ### How to Use
 
-1.  Download `converter.exe` from the [Releases](../../releases) (or Artifacts).
+1.  **[📥 Download Latest Version (converter.exe)](releases/latest)** from the Releases page.
 2.  Double-click to run (ignore Windows Defender warnings if they appear).
 3.  Click the button and select the folder containing your `.nef` photos.
 4.  The program will create a `JPG_Output` folder inside and save the converted images there.
@@ -40,8 +40,8 @@ A simple, standalone tool for batch converting Nikon RAW (.nef) files to high-qu
 * **便携免安**：单文件 `.exe`，无需安装 Python 环境。
 
 ### 使用方法
-
-1.  下载 `converter.exe` 文件。
+1.  **[📥 点击这里下载最新版工具 (converter.exe)](releases/latest)**
+    * *点击后，在 Assets 区域找到 converter.exe 下载即可。*
 2.  双击运行（如果是自制软件，杀毒软件可能会提示，允许运行即可）。
 3.  点击按钮，选择存放 `.nef` 照片的文件夹。
 4.  程序会自动在该文件夹下新建 `JPG_Output` 目录，转换好的图片都在里面。
