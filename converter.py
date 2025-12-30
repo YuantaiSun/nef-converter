@@ -4,12 +4,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import rawpy
 import imageio
-import traceback # 新增：用于获取详细报错信息
+import traceback
 
 class NEFConverterApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("尼康NEF转JPG工具 (含错误诊断)")
+        self.root.title("尼康NEF转JPG工具 (终极修复版)")
         self.root.geometry("500x350")
         
         self.frame = tk.Frame(root, padx=20, pady=20)
@@ -50,12 +50,12 @@ class NEFConverterApp:
             try:
                 os.makedirs(output_dir)
             except Exception as e:
-                messagebox.showerror("创建文件夹失败", f"无法创建输出文件夹:\n{e}")
+                messagebox.showerror("错误", f"无法创建输出文件夹: {e}")
                 self.btn_select.config(state=tk.NORMAL)
                 return
 
         success_count = 0
-        error_shown = False # 标记：是否已经展示过错误弹窗
+        error_shown = False 
 
         for idx, file in enumerate(files):
             input_path = os.path.join(folder_path, file)
@@ -64,17 +64,27 @@ class NEFConverterApp:
             self.status_label.config(text=f"正在处理: {file}")
             
             try:
-                with rawpy.imread(input_path) as raw:
-                    rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=False, bright=1.0)
-                    imageio.imsave(output_path, rgb, quality=95, subsampling=0)
-                    success_count += 1
+                # --- 核心修改开始 ---
+                # 不直接传路径，而是先用 Python 打开文件，彻底避开 C++ 路径编码 Bug
+                with open(input_path, 'rb') as source_file:
+                    with rawpy.imread(source_file) as raw:
+                        # use_camera_wb=True: 使用拍摄时的白平衡
+                        # bright=1.0: 保持默认亮度
+                        rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=False, bright=1.0)
+                        imageio.imsave(output_path, rgb, quality=95, subsampling=0)
+                # --- 核心修改结束 ---
+                
+                success_count += 1
             except Exception as e:
-                # 关键修改：如果有错误，且还没弹窗过，就弹窗显示详细错误！
+                print(f"Failed: {file} - {e}")
                 if not error_shown:
+                    # 获取详细报错并弹窗
                     error_msg = traceback.format_exc()
-                    self.root.after(0, lambda m=error_msg, f=file: messagebox.showerror("发生错误", f"处理文件 {f} 时失败！\n\n我们将继续尝试处理其他文件，但请截图此错误发给开发者：\n\n{m}"))
-                    error_shown = True # 只弹一次窗，避免几百张图弹几百次
-                print(f"Error: {e}")
+                    self.root.after(0, lambda m=error_msg, f=file: messagebox.showerror(
+                        "转换失败", 
+                        f"文件: {f}\n\n这可能是因为文件已损坏或相机型号太新。\n\n详细错误:\n{m}"
+                    ))
+                    error_shown = True
 
             self.progress['value'] = idx + 1
             self.root.update_idletasks()
@@ -82,10 +92,10 @@ class NEFConverterApp:
         self.status_label.config(text=f"完成！成功: {success_count}, 失败: {len(files) - success_count}")
         self.btn_select.config(state=tk.NORMAL)
         
-        if success_count == 0:
-            messagebox.showwarning("失败", "所有图片都转换失败了，请查看刚才的错误弹窗。")
-        else:
-            messagebox.showinfo("完成", f"处理完成！\n成功: {success_count}\n保存在: {output_dir}")
+        if success_count > 0:
+            messagebox.showinfo("完成", f"成功转换 {success_count} 张图片！\n保存在: {output_dir}")
+        elif not error_shown:
+            messagebox.showwarning("提示", "没有转换任何图片，但也没有检测到严重错误。")
 
 if __name__ == "__main__":
     root = tk.Tk()
