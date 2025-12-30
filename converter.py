@@ -4,14 +4,14 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import rawpy
 import imageio
+import traceback # 新增：用于获取详细报错信息
 
 class NEFConverterApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("尼康NEF转JPG工具 (无损画质版)")
-        self.root.geometry("500x300")
+        self.root.title("尼康NEF转JPG工具 (含错误诊断)")
+        self.root.geometry("500x350")
         
-        # 布局
         self.frame = tk.Frame(root, padx=20, pady=20)
         self.frame.pack(expand=True, fill=tk.BOTH)
 
@@ -24,11 +24,10 @@ class NEFConverterApp:
         self.progress = ttk.Progressbar(self.frame, orient=tk.HORIZONTAL, length=100, mode='determinate')
         self.progress.pack(pady=20, fill=tk.X)
 
-        self.status_label = tk.Label(self.frame, text="等待开始...", fg="gray")
+        self.status_label = tk.Label(self.frame, text="等待开始...", fg="gray", wraplength=400)
         self.status_label.pack()
 
     def start_thread(self):
-        # 使用线程避免界面卡死
         threading.Thread(target=self.convert_process, daemon=True).start()
 
     def convert_process(self):
@@ -46,38 +45,47 @@ class NEFConverterApp:
         self.progress['maximum'] = len(files)
         self.progress['value'] = 0
         
-        # 创建输出文件夹
         output_dir = os.path.join(folder_path, "JPG_Output")
         if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+            try:
+                os.makedirs(output_dir)
+            except Exception as e:
+                messagebox.showerror("创建文件夹失败", f"无法创建输出文件夹:\n{e}")
+                self.btn_select.config(state=tk.NORMAL)
+                return
 
         success_count = 0
-        
+        error_shown = False # 标记：是否已经展示过错误弹窗
+
         for idx, file in enumerate(files):
             input_path = os.path.join(folder_path, file)
             output_path = os.path.join(output_dir, os.path.splitext(file)[0] + ".jpg")
             
-            self.status_label.config(text=f"正在处理: {file} ({idx+1}/{len(files)})")
+            self.status_label.config(text=f"正在处理: {file}")
             
             try:
                 with rawpy.imread(input_path) as raw:
-                    # postprocess 将 RAW 数据demosaic成 RGB 图像
-                    # use_camera_wb=True 使用拍摄时的白平衡
-                    # no_auto_bright=False 允许自动调整亮度以匹配相机预览
                     rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=False, bright=1.0)
-                    
-                    # 保存为 JPG，quality=95 接近无损，subsampling=0 保证色彩采样不压缩
                     imageio.imsave(output_path, rgb, quality=95, subsampling=0)
                     success_count += 1
             except Exception as e:
-                print(f"Error converting {file}: {e}")
+                # 关键修改：如果有错误，且还没弹窗过，就弹窗显示详细错误！
+                if not error_shown:
+                    error_msg = traceback.format_exc()
+                    self.root.after(0, lambda m=error_msg, f=file: messagebox.showerror("发生错误", f"处理文件 {f} 时失败！\n\n我们将继续尝试处理其他文件，但请截图此错误发给开发者：\n\n{m}"))
+                    error_shown = True # 只弹一次窗，避免几百张图弹几百次
+                print(f"Error: {e}")
 
             self.progress['value'] = idx + 1
             self.root.update_idletasks()
 
-        self.status_label.config(text=f"完成！成功转换 {success_count} 张图片。")
+        self.status_label.config(text=f"完成！成功: {success_count}, 失败: {len(files) - success_count}")
         self.btn_select.config(state=tk.NORMAL)
-        messagebox.showinfo("成功", f"处理完成！\n图片已保存在: {output_dir}")
+        
+        if success_count == 0:
+            messagebox.showwarning("失败", "所有图片都转换失败了，请查看刚才的错误弹窗。")
+        else:
+            messagebox.showinfo("完成", f"处理完成！\n成功: {success_count}\n保存在: {output_dir}")
 
 if __name__ == "__main__":
     root = tk.Tk()
