@@ -24,7 +24,8 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --noconsole --hidden-import=rawpy --hidden-import=imageio converter.py
+        # 增加 --copy-metadata 参数，强制复制库的元数据
+        pyinstaller --onefile --noconsole --hidden-import=rawpy --hidden-import=imageio --copy-metadata=imageio --copy-metadata=rawpy converter.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
