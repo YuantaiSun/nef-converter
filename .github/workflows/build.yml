@@ -9,10 +9,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -24,13 +24,10 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        # --onefile 打包成单文件
-        # --noconsole 运行时不显示黑框
-        # --hidden-import 确保依赖库被正确包含
         pyinstaller --onefile --noconsole --hidden-import=rawpy --hidden-import=imageio converter.py
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: NikonConverter_Windows
         path: dist/converter.exe
